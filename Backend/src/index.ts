@@ -19,10 +19,12 @@ wss.on("connection", (socket: WebSocket) => {
   socket.on("message", (e) => {
     ////Convert String to JSON obj
     const parsedMessage = JSON.parse(e.toString());
+    console.log(parsedMessage);
 
     ////If message type is join a room
     if (parsedMessage.type === "join") {
       ////removed if already connected to a room
+      console.log("Joined");
       allSockets = allSockets.filter((x) => x.socket !== socket);
       allSockets.push({
         socket,

@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useNavigate } from "react-router";
+import { useSocketStore } from "../store/stores";
 
 const Hero = () => {
   const [roomId, setRoomId] = useState("");
   const navigate = useNavigate();
+  const { setSocket } = useSocketStore();
 
   const handleJoin = () => {
     if (roomId.trim()) {
@@ -16,6 +18,10 @@ const Hero = () => {
     const newRoomId = uuidv4();
     navigate(`/room/${newRoomId}`);
   };
+  useEffect(() => {
+    const wss = new WebSocket("ws://localhost:8080");
+    setSocket(wss);
+  }, []);
 
   return (
     <div className='flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-600 to-indigo-700 text-white p-6'>

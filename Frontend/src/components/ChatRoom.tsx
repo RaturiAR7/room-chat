@@ -1,40 +1,63 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router";
+import { useSocketStore } from "../store/stores";
 
-const Home = () => {
-  const [socket, setSocket] = useState<WebSocket | null>(null);
-  const [username, setUsername] = useState("");
-  const [type, setType] = useState("join");
+interface Data {
+  text: string;
+  sender: string;
+}
+const ChatRoom = () => {
+  const param = useParams();
+  const socket = useSocketStore((state) => state.socket);
+  const [username, setUsername] = useState("defaultUser");
   const [message, setMessage] = useState("");
-  const [data, setData] = useState([
-    {
-      text: "Hello",
-      sender: "System",
-    },
-  ]);
+  const [data, setData] = useState<Data[]>([]);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080");
-    setSocket(ws);
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      setData((prevData) => [
-        ...prevData,
-        { text: data.message, sender: data.username },
-      ]);
-    };
-  }, []);
+    if (socket) {
+      const name = prompt("Enter your username:") || "defaultUser";
+      setUsername(name); // Set state for use in sending messages
+
+      // 1. Send the join instruction with the NEW name directly
+      const joinInstruction = {
+        type: "join",
+        payload: {
+          username: name, // Use the name from the prompt, not stale state
+          roomId: param?.roomId,
+        },
+      };
+      socket.send(JSON.stringify(joinInstruction));
+
+      // 2. Set up the message listener ONCE
+      const handleMessage = (event) => {
+        const parsedData = JSON.parse(event.data);
+        setData((prev) => [
+          ...prev,
+          { text: parsedData.message, sender: parsedData.username },
+        ]);
+      };
+
+      socket.onmessage = handleMessage;
+
+      // 3. Cleanup: remove the listener when the component unmounts
+      return () => {
+        socket.onmessage = null;
+      };
+    }
+  }, [socket, param?.roomId]);
+
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (socket) {
       const instruction = {
-        type,
+        type: "chat",
         payload: {
           username: username,
-          roomId: type === "join" ? message : "",
-          message: type === "chat" ? message : "",
+          message: message,
         },
       };
       socket.send(JSON.stringify(instruction));
+      setMessage(""); // Clear message input after sending
     } else {
       console.error("WebSocket is not connected");
     }
@@ -44,7 +67,7 @@ const Home = () => {
     <div className='h-screen bg-black text-white flex flex-col justify-center'>
       <h1 className='text-2xl font-bold mb-4'>Chat Application</h1>
       <div className='bg-black'>
-        {data.map((item, index) => {
+        {data?.map((item, index) => {
           return (
             <div key={index} className='mb-2 flex flex-col text-black '>
               <div className='bg-white rounded-md p-2'>
@@ -59,45 +82,16 @@ const Home = () => {
         className='border-2 border-white rounded-lg p-4 m-4'
         onSubmit={sendMessage}
       >
-        <div className='mb-10 flex gap-7'>
-          <label htmlFor='username' className=''>
-            User Name:
-          </label>
-          <input
-            type='text'
-            id='username'
-            className='p-2 border border-gray-300 rounded'
-            placeholder='Enter your name'
-            onChange={(e) => setUsername(e.target.value)}
-          />
-        </div>
-        <div className='mb-10 flex gap-7'>
-          <label htmlFor='type' className=''>
-            Type:
-          </label>
-          <select
-            name='type'
-            id=''
-            onChange={(e) => setType(e.target.value)}
-            className='p-2 border border-gray-300 rounded'
-          >
-            <option value='join' className='bg-black'>
-              Join
-            </option>
-            <option value='chat' className='bg-black'>
-              Chat
-            </option>
-          </select>
-        </div>
         <div className='mb-4'>
           <label htmlFor='message' className='block mb-2'>
-            {type === "join" ? "Room Id:" : "Message:"}
+            Message
           </label>
           <textarea
             id='message'
             className='w-full p-2 border border-gray-300 rounded'
             placeholder='Type your message here...'
             onChange={(e) => setMessage(e.target.value)}
+            value={message}
           ></textarea>
         </div>
         <button
@@ -111,4 +105,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default ChatRoom;
