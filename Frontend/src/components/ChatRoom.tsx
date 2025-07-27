@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useSocketStore } from "../store/stores";
+import CopyBox from "./CopyBox";
 
 interface Data {
   text: string;
@@ -64,8 +65,9 @@ const ChatRoom = () => {
   };
 
   return (
-    <div className='h-screen bg-black text-white flex flex-col justify-center'>
-      <h1 className='text-2xl font-bold mb-4'>Chat Application</h1>
+    <div className='h-screen bg-black text-white flex flex-col'>
+      <h1 className='text-2xl font-bold mb-4 text-center'>Chat Application</h1>
+      <CopyBox roomId={param?.roomId} />
       <div className='bg-black'>
         {data?.map((item, index) => {
           return (
